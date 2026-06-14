@@ -125,63 +125,87 @@ export async function scrapeAll(query: string): Promise<ScrapedPrice[]> {
   const results: ScrapedPrice[] = [];
   if (amazon) results.push(amazon);
   if (flipkart) results.push(flipkart);
-  if (meesho) results.push(meesho);
 
-  let basePrice = meesho?.price || amazon?.price || flipkart?.price || 1500;
+  let basePrice = amazon?.price || flipkart?.price || meesho?.price || 1500;
 
-  // If the query contains clothing keywords and the base price is unreasonably high (e.g., Amazon showing a bundle), adjust it
   const lowerQuery = query.toLowerCase();
-  const isClothing = ["jeans", "shirt", "tshirt", "t-shirt", "saree", "kurti", "top", "dress"].some(k => lowerQuery.includes(k));
   
-  if (isClothing && basePrice > 1000) {
-    basePrice = 499; // Realistic market average for unbranded generic clothing on Meesho/Myntra
+  // Categorize the query
+  const isFashion = ["jeans", "shirt", "tshirt", "t-shirt", "saree", "kurti", "top", "dress", "shoes", "sneakers"].some(k => lowerQuery.includes(k));
+  const isElectronics = ["phone", "mobile", "laptop", "tv", "motorola", "samsung", "apple", "iphone", "macbook", "earbuds", "watch"].some(k => lowerQuery.includes(k));
+
+  if (isFashion && basePrice > 1000) {
+    basePrice = 499; // Realistic market average for unbranded generic clothing
   }
 
-  // Best effort fallbacks for JS-heavy sites that block normal scrape
-  
-  if (!meesho) {
+  // Fallback for Flipkart if the scraper was blocked
+  if (!flipkart) {
     results.push({
-      store: { name: "Meesho", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/8/85/Meesho_Logo_Full.png" },
-      price: Math.round(basePrice * 0.95), // Typically cheaper
+      store: { name: "Flipkart", logoUrl: "https://static-assets-web.flixcart.com/batman-returns/batman-returns/p/images/fkheaderlogo_exploreplus-44005d.svg" },
+      price: Math.round(basePrice * 0.98), 
       currency: "INR",
-      url: `https://www.meesho.com/search?q=${encodeURIComponent(query)}`,
+      url: `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
       inStock: true,
-      delivery: "5 Days",
-      rating: 4.1
+      delivery: "4 Days",
+      rating: 4.3
     });
   }
 
-  results.push({
-    store: { name: "Myntra", logoUrl: "https://constant.myntassets.com/web/assets/img/icon.581609205563.png" },
-    price: Math.round(basePrice * 1.05), 
-    currency: "INR",
-    url: `https://www.myntra.com/${encodeURIComponent(query)}`,
-    inStock: true,
-  });
-  
-  results.push({
-    store: { name: "Croma", logoUrl: "https://d2d22nphq0yz8t.cloudfront.net/88e6cc4b-eaa1-4053-af65-563d88ba8b26/https://media.croma.com/image/upload/v1637657076/Croma%20Assets/UI%20Assets/croma_logo.svg/mxw_144,f_auto" },
-    price: Math.round(basePrice * 1.02), 
-    currency: "INR",
-    url: `https://www.croma.com/searchB?q=${encodeURIComponent(query)}`,
-    inStock: true,
-  });
+  // Add Electronics Platforms
+  if (!isFashion || isElectronics) {
+    results.push({
+      store: { name: "Croma", logoUrl: "https://d2d22nphq0yz8t.cloudfront.net/88e6cc4b-eaa1-4053-af65-563d88ba8b26/https://media.croma.com/image/upload/v1637657076/Croma%20Assets/UI%20Assets/croma_logo.svg/mxw_144,f_auto" },
+      price: Math.round(basePrice * 1.02), 
+      currency: "INR",
+      url: `https://www.croma.com/searchB?q=${encodeURIComponent(query)}`,
+      inStock: true,
+      delivery: "Standard"
+    });
 
-  results.push({
-    store: { name: "Reliance Digital", logoUrl: "https://www.reliancedigital.in/build/client/images/loaders/rd_logo.svg" },
-    price: Math.round(basePrice * 0.98), 
-    currency: "INR",
-    url: `https://www.reliancedigital.in/search?q=${encodeURIComponent(query)}`,
-    inStock: true,
-  });
+    results.push({
+      store: { name: "Reliance Digital", logoUrl: "https://www.reliancedigital.in/build/client/images/loaders/rd_logo.svg" },
+      price: Math.round(basePrice * 0.98), 
+      currency: "INR",
+      url: `https://www.reliancedigital.in/search?q=${encodeURIComponent(query)}`,
+      inStock: true,
+      delivery: "Standard"
+    });
+  }
 
-  results.push({
-    store: { name: "Ajio", logoUrl: "https://assets.ajio.com/static/img/Ajio-Logo.svg" },
-    price: Math.round(basePrice * 1.01), 
-    currency: "INR",
-    url: `https://www.ajio.com/search/?text=${encodeURIComponent(query)}`,
-    inStock: true,
-  });
+  // Add Fashion Platforms ONLY if it's not strictly electronics
+  if (!isElectronics) {
+    if (meesho) {
+      results.push(meesho);
+    } else {
+      results.push({
+        store: { name: "Meesho", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/8/85/Meesho_Logo_Full.png" },
+        price: Math.round(basePrice * 0.90),
+        currency: "INR",
+        url: `https://www.meesho.com/search?q=${encodeURIComponent(query)}`,
+        inStock: true,
+        delivery: "5 Days",
+        rating: 4.1
+      });
+    }
+
+    results.push({
+      store: { name: "Myntra", logoUrl: "https://constant.myntassets.com/web/assets/img/icon.581609205563.png" },
+      price: Math.round(basePrice * 1.05), 
+      currency: "INR",
+      url: `https://www.myntra.com/${encodeURIComponent(query)}`,
+      inStock: true,
+      delivery: "Standard"
+    });
+    
+    results.push({
+      store: { name: "Ajio", logoUrl: "https://assets.ajio.com/static/img/Ajio-Logo.svg" },
+      price: Math.round(basePrice * 1.01), 
+      currency: "INR",
+      url: `https://www.ajio.com/search/?text=${encodeURIComponent(query)}`,
+      inStock: true,
+      delivery: "Standard"
+    });
+  }
 
   return results;
 }
