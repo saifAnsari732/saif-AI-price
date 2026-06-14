@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Image as ImageIcon, Link2, UploadCloud, Loader2 } from "lucide-react";
 import { IKContext, IKUpload } from "imagekitio-react";
@@ -12,6 +13,7 @@ const tabs = [
 ];
 
 export default function HeroSearch() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("text");
   const [query, setQuery] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -20,8 +22,14 @@ export default function HeroSearch() {
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!query && !uploadedUrl) return;
-    console.log("Searching for:", activeTab === "image" ? uploadedUrl : query);
-    // Connect to backend search API logic here
+    
+    if (activeTab === "text") {
+      router.push(`/search?q=${encodeURIComponent(query)}`);
+    } else if (activeTab === "url") {
+      router.push(`/search?url=${encodeURIComponent(query)}`);
+    } else if (activeTab === "image" && uploadedUrl) {
+      router.push(`/search?image=${encodeURIComponent(uploadedUrl)}`);
+    }
   };
 
   const authenticator = async () => {
